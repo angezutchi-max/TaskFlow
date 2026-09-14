@@ -1,26 +1,214 @@
 @import "tailwindcss";
-
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+    --background: #f5f7fa;
+    --foreground: #1a202c;
+    --primary: #005b96;
+    --primary-hover: #004777;
+    --border: #e2e8f0;
+    --white: #ffffff;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html,
+body {
+    min-height: 100%;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+    background: var(--background);
+    color: var(--foreground);
+    font-family: Arial, Helvetica, sans-serif;
+}
+
+
+/* =========================
+   NAVBAR
+========================= */
+
+nav {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 18px 60px;
+    background: var(--white);
+    border-bottom: 1px solid var(--border);
+}
+
+nav>div:first-child {
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--primary);
+}
+
+nav>div:last-child {
+    display: flex;
+    gap: 25px;
+}
+
+nav a {
+    color: var(--foreground);
+    text-decoration: none;
+    font-size: 15px;
+    font-weight: 500;
+}
+
+nav a:hover {
+    color: var(--primary);
+}
+
+
+/* =========================
+   CONTENU PRINCIPAL
+========================= */
+
+main {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 60px 30px;
+}
+
+main h1 {
+    font-size: 42px;
+    margin-bottom: 20px;
+    color: var(--foreground);
+}
+
+main h2 {
+    font-size: 28px;
+    margin-bottom: 15px;
+}
+
+main p {
+    line-height: 1.7;
+}
+
+
+/* =========================
+   FORMULAIRE
+========================= */
+
+form {
+    width: 100%;
+    max-width: 450px;
+    margin-top: 30px;
+    padding: 30px;
+    background: var(--white);
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.06);
+}
+
+form div {
+    margin-bottom: 20px;
+}
+
+label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+}
+
+input {
+    width: 100%;
+    padding: 13px 14px;
+    border: 1px solid #cbd5e0;
+    border-radius: 8px;
+    font-size: 15px;
+    outline: none;
+}
+
+input:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(0, 91, 150, 0.1);
+}
+
+input::placeholder {
+    color: #a0aec0;
+}
+
+
+/* =========================
+   BOUTONS
+========================= */
+
+button {
+    width: 100%;
+    padding: 13px 18px;
+    border: none;
+    border-radius: 8px;
+    background: var(--primary);
+    color: var(--white);
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: 0.2s ease;
+}
+
+button:hover {
+    background: var(--primary-hover);
+}
+
+button:active {
+    transform: scale(0.98);
+}
+
+
+/* =========================
+   LIENS
+========================= */
+
+a {
+    color: var(--primary);
+}
+
+main>a {
+    display: inline-block;
+    margin-bottom: 30px;
+    text-decoration: none;
+    font-weight: 500;
+}
+
+main>a:hover {
+    text-decoration: underline;
+}
+
+
+/* =========================
+   MESSAGES
+========================= */
+
+main>p {
+    margin-bottom: 15px;
+}
+
+
+/* =========================
+   RESPONSIVE
+========================= */
+
+@media (max-width: 768px) {
+    nav {
+        padding: 16px 20px;
+    }
+    nav>div:last-child {
+        gap: 12px;
+    }
+    nav a {
+        font-size: 14px;
+    }
+    main {
+        padding: 40px 20px;
+    }
+    main h1 {
+        font-size: 32px;
+    }
+    form {
+        padding: 22px;
+    }
 }
