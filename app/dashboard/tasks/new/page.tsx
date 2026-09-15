@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 export default function NewTask() {
@@ -9,8 +9,23 @@ export default function NewTask() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [error, setError] = useState("");
+  const [checkingAuth, setCheckingAuth] = useState(true);
 
-  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+  useEffect(() => {
+    const isLoggedIn =
+      localStorage.getItem("isLoggedIn") === "true";
+
+    if (!isLoggedIn) {
+      router.replace("/login");
+      return;
+    }
+
+    setCheckingAuth(false);
+  }, [router]);
+
+  async function handleSubmit(
+    event: React.FormEvent<HTMLFormElement>
+  ) {
     event.preventDefault();
 
     setError("");
@@ -44,6 +59,14 @@ export default function NewTask() {
     }
   }
 
+  if (checkingAuth) {
+    return (
+      <main>
+        <p>Vérification de la connexion...</p>
+      </main>
+    );
+  }
+
   return (
     <main>
       <h1>Créer une tâche</h1>
@@ -59,18 +82,24 @@ export default function NewTask() {
             id="title"
             placeholder="Ex : Apprendre TypeScript"
             value={title}
-            onChange={(event) => setTitle(event.target.value)}
+            onChange={(event) =>
+              setTitle(event.target.value)
+            }
           />
         </div>
 
         <div>
-          <label htmlFor="description">Description</label>
+          <label htmlFor="description">
+            Description
+          </label>
 
           <textarea
             id="description"
             placeholder="Décris ta tâche..."
             value={description}
-            onChange={(event) => setDescription(event.target.value)}
+            onChange={(event) =>
+              setDescription(event.target.value)
+            }
           />
         </div>
 

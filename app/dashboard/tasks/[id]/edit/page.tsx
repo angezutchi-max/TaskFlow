@@ -19,15 +19,28 @@ export default function EditTask() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [loading, setLoading] = useState(true);
+  const [checkingAuth, setCheckingAuth] = useState(true);
   const [error, setError] = useState("");
 
   useEffect(() => {
+    const isLoggedIn =
+      localStorage.getItem("isLoggedIn") === "true";
+
+    if (!isLoggedIn) {
+      router.replace("/login");
+      return;
+    }
+
+    setCheckingAuth(false);
+
     async function getTask() {
       try {
         const response = await fetch(`/api/tasks/${id}`);
 
         if (!response.ok) {
-          setError("Impossible de récupérer cette tâche.");
+          setError(
+            "Impossible de récupérer cette tâche."
+          );
           return;
         }
 
@@ -44,7 +57,7 @@ export default function EditTask() {
     }
 
     getTask();
-  }, [id]);
+  }, [id, router]);
 
   async function handleSubmit(
     event: React.FormEvent<HTMLFormElement>
@@ -52,19 +65,24 @@ export default function EditTask() {
     event.preventDefault();
 
     try {
-      const response = await fetch(`/api/tasks/${id}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          title,
-          description,
-        }),
-      });
+      const response = await fetch(
+        `/api/tasks/${id}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            title,
+            description,
+          }),
+        }
+      );
 
       if (!response.ok) {
-        setError("Impossible de modifier la tâche.");
+        setError(
+          "Impossible de modifier la tâche."
+        );
         return;
       }
 
@@ -73,6 +91,15 @@ export default function EditTask() {
       console.error("Erreur :", error);
       setError("Une erreur est survenue.");
     }
+  }
+
+  if (checkingAuth) {
+    return (
+      <main>
+        <h1>Modifier la tâche</h1>
+        <p>Vérification de la connexion...</p>
+      </main>
+    );
   }
 
   if (loading) {
@@ -105,17 +132,23 @@ export default function EditTask() {
             type="text"
             id="title"
             value={title}
-            onChange={(event) => setTitle(event.target.value)}
+            onChange={(event) =>
+              setTitle(event.target.value)
+            }
           />
         </div>
 
         <div>
-          <label htmlFor="description">Description</label>
+          <label htmlFor="description">
+            Description
+          </label>
 
           <textarea
             id="description"
             value={description}
-            onChange={(event) => setDescription(event.target.value)}
+            onChange={(event) =>
+              setDescription(event.target.value)
+            }
           />
         </div>
 

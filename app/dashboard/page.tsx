@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 type Task = {
   id: number;
@@ -11,10 +12,19 @@ type Task = {
 };
 
 export default function Dashboard() {
+  const router = useRouter();
+
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    const isLoggedIn = localStorage.getItem("isLoggedIn");
+
+    if (isLoggedIn !== "true") {
+      router.replace("/login");
+      return;
+    }
+
     async function getTasks() {
       try {
         const response = await fetch("/api/tasks");
@@ -29,14 +39,16 @@ export default function Dashboard() {
     }
 
     getTasks();
-  }, []);
+  }, [router]);
 
   async function deleteTask(id: number) {
     await fetch(`/api/tasks/${id}`, {
       method: "DELETE",
     });
 
-    setTasks(tasks.filter((task) => task.id !== id));
+    setTasks((currentTasks) =>
+      currentTasks.filter((task) => task.id !== id)
+    );
   }
 
   async function toggleTask(task: Task) {
@@ -50,8 +62,8 @@ export default function Dashboard() {
       }),
     });
 
-    setTasks(
-      tasks.map((t) =>
+    setTasks((currentTasks) =>
+      currentTasks.map((t) =>
         t.id === task.id
           ? { ...t, completed: !t.completed }
           : t
@@ -63,7 +75,7 @@ export default function Dashboard() {
     return (
       <main className="dashboard">
         <div className="loading">
-          <p>Chargement des tâches...</p>
+          <p>Chargement...</p>
         </div>
       </main>
     );
@@ -79,12 +91,13 @@ export default function Dashboard() {
 
   return (
     <main className="dashboard">
-      {/* HEADER */}
       <section className="dashboard-header">
         <div>
-          <p className="dashboard-label">TABLEAU DE BORD</p>
+          <p className="dashboard-label">
+            TABLEAU DE BORD
+          </p>
 
-          <h1>Bonjour </h1>
+          <h1>Bonjour 👋</h1>
 
           <p className="dashboard-description">
             Voici un aperçu de tes tâches et de ta progression.
@@ -100,7 +113,6 @@ export default function Dashboard() {
         </Link>
       </section>
 
-      {/* STATISTIQUES */}
       <section className="stats-grid">
         <div className="stat-card">
           <div className="stat-icon blue">✓</div>
@@ -130,7 +142,6 @@ export default function Dashboard() {
         </div>
       </section>
 
-      {/* TÂCHES */}
       <section className="tasks-section">
         <div className="section-header">
           <div>
@@ -139,7 +150,8 @@ export default function Dashboard() {
           </div>
 
           <span className="task-count">
-            {tasks.length} tâche{tasks.length > 1 ? "s" : ""}
+            {tasks.length} tâche
+            {tasks.length > 1 ? "s" : ""}
           </span>
         </div>
 
@@ -150,7 +162,7 @@ export default function Dashboard() {
             <h3>Aucune tâche</h3>
 
             <p>
-              Tu n'as pas encore créé de tâche.
+              Tu n&apos;as pas encore créé de tâche.
             </p>
 
             <Link
