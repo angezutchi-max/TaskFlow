@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import {
   getAuth,
   onAuthStateChanged,
+  signOut,
 } from "firebase/auth";
 
 import app from "@/lib/firebase";
@@ -24,6 +25,7 @@ export default function Dashboard() {
 
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
+  const [userEmail, setUserEmail] = useState("");
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(
@@ -33,6 +35,8 @@ export default function Dashboard() {
           router.replace("/login");
           return;
         }
+
+        setUserEmail(user.email || "");
 
         async function getTasks() {
           try {
@@ -66,6 +70,18 @@ export default function Dashboard() {
 
     return () => unsubscribe();
   }, [router]);
+
+  async function handleLogout() {
+    try {
+      await signOut(auth);
+      router.replace("/login");
+    } catch (error) {
+      console.error(
+        "Erreur lors de la déconnexion :",
+        error
+      );
+    }
+  }
 
   async function deleteTask(id: string) {
     const user = auth.currentUser;
@@ -183,15 +199,31 @@ export default function Dashboard() {
             Voici un aperçu de tes tâches et de ta
             progression.
           </p>
+
+          {userEmail && (
+            <p className="user-email">
+              Connecté avec : {userEmail}
+            </p>
+          )}
         </div>
 
-        <Link
-          href="/dashboard/tasks/new"
-          className="new-task-button"
-        >
-          <span>+</span>
-          Nouvelle tâche
-        </Link>
+        <div className="dashboard-actions">
+          <Link
+            href="/dashboard/tasks/new"
+            className="new-task-button"
+          >
+            <span>+</span>
+            Nouvelle tâche
+          </Link>
+
+          <button
+            type="button"
+            className="logout-button"
+            onClick={handleLogout}
+          >
+            Déconnexion
+          </button>
+        </div>
       </section>
 
       <section className="stats-grid">
