@@ -3,13 +3,21 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import {
+  getAuth,
+  onAuthStateChanged,
+} from "firebase/auth";
+
+import app from "@/lib/firebase";
 
 type Task = {
-  id: number;
+  id: string;
   title: string;
   description: string;
   completed: boolean;
 };
+
+const auth = getAuth(app);
 
 export default function Dashboard() {
   const router = useRouter();
@@ -18,57 +26,129 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const isLoggedIn = localStorage.getItem("isLoggedIn");
+    const unsubscribe = onAuthStateChanged(
+      auth,
+      (user) => {
+        if (!user) {
+          router.replace("/login");
+          return;
+        }
 
-    if (isLoggedIn !== "true") {
-      router.replace("/login");
+        async function getTasks() {
+          try {
+            const token = await user.getIdToken();
+
+            const response = await fetch("/api/tasks", {
+              headers: {
+                Authorization: `Bearer ${token}`,
+              },
+            });
+
+            if (!response.ok) {
+              throw new Error(
+                "Impossible de récupérer les tâches."
+              );
+            }
+
+            const data = await response.json();
+
+            setTasks(data);
+          } catch (error) {
+            console.error("Erreur :", error);
+          } finally {
+            setLoading(false);
+          }
+        }
+
+        getTasks();
+      }
+    );
+
+    return () => unsubscribe();
+  }, [router]);
+
+  async function deleteTask(id: string) {
+    const user = auth.currentUser;
+
+    if (!user) {
       return;
     }
 
-    async function getTasks() {
-      try {
-        const response = await fetch("/api/tasks");
-        const data = await response.json();
+    try {
+      const token = await user.getIdToken();
 
-        setTasks(data);
-      } catch (error) {
-        console.error("Erreur :", error);
-      } finally {
-        setLoading(false);
+      const response = await fetch(`/api/tasks/${id}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        console.error(
+          "Impossible de supprimer la tâche."
+        );
+        return;
       }
+
+      setTasks((currentTasks) =>
+        currentTasks.filter((task) => task.id !== id)
+      );
+    } catch (error) {
+      console.error(
+        "Erreur lors de la suppression :",
+        error
+      );
     }
-
-    getTasks();
-  }, [router]);
-
-  async function deleteTask(id: number) {
-    await fetch(`/api/tasks/${id}`, {
-      method: "DELETE",
-    });
-
-    setTasks((currentTasks) =>
-      currentTasks.filter((task) => task.id !== id)
-    );
   }
 
   async function toggleTask(task: Task) {
-    await fetch(`/api/tasks/${task.id}`, {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        completed: !task.completed,
-      }),
-    });
+    const user = auth.currentUser;
 
-    setTasks((currentTasks) =>
-      currentTasks.map((t) =>
-        t.id === task.id
-          ? { ...t, completed: !t.completed }
-          : t
-      )
-    );
+    if (!user) {
+      return;
+    }
+
+    try {
+      const token = await user.getIdToken();
+
+      const response = await fetch(
+        `/api/tasks/${task.id}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            completed: !task.completed,
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        console.error(
+          "Impossible de modifier la tâche."
+        );
+        return;
+      }
+
+      setTasks((currentTasks) =>
+        currentTasks.map((t) =>
+          t.id === task.id
+            ? {
+                ...t,
+                completed: !t.completed,
+              }
+            : t
+        )
+      );
+    } catch (error) {
+      console.error(
+        "Erreur lors de la modification :",
+        error
+      );
+    }
   }
 
   if (loading) {
@@ -97,10 +177,11 @@ export default function Dashboard() {
             TABLEAU DE BORD
           </p>
 
-          <h1>Bonjour 👋</h1>
+          <h1>Bonjour</h1>
 
           <p className="dashboard-description">
-            Voici un aperçu de tes tâches et de ta progression.
+            Voici un aperçu de tes tâches et de ta
+            progression.
           </p>
         </div>
 

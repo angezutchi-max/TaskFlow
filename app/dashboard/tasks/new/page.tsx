@@ -2,6 +2,14 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import {
+  getAuth,
+  onAuthStateChanged,
+} from "firebase/auth";
+
+import app from "@/lib/firebase";
+
+const auth = getAuth(app);
 
 export default function NewTask() {
   const router = useRouter();
@@ -12,15 +20,16 @@ export default function NewTask() {
   const [checkingAuth, setCheckingAuth] = useState(true);
 
   useEffect(() => {
-    const isLoggedIn =
-      localStorage.getItem("isLoggedIn") === "true";
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (!user) {
+        router.replace("/login");
+        return;
+      }
 
-    if (!isLoggedIn) {
-      router.replace("/login");
-      return;
-    }
+      setCheckingAuth(false);
+    });
 
-    setCheckingAuth(false);
+    return () => unsubscribe();
   }, [router]);
 
   async function handleSubmit(
@@ -36,10 +45,20 @@ export default function NewTask() {
     }
 
     try {
+      const user = auth.currentUser;
+
+      if (!user) {
+        setError("Tu dois être connecté.");
+        return;
+      }
+
+      const token = await user.getIdToken();
+
       const response = await fetch("/api/tasks", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
           title,

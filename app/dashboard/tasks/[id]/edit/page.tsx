@@ -2,13 +2,21 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
+import {
+  getAuth,
+  onAuthStateChanged,
+} from "firebase/auth";
+
+import app from "@/lib/firebase";
 
 type Task = {
-  id: number;
+  id: string;
   title: string;
   description: string;
   completed: boolean;
 };
+
+const auth = getAuth(app);
 
 export default function EditTask() {
   const params = useParams();
@@ -23,40 +31,53 @@ export default function EditTask() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    const isLoggedIn =
-      localStorage.getItem("isLoggedIn") === "true";
-
-    if (!isLoggedIn) {
-      router.replace("/login");
-      return;
-    }
-
-    setCheckingAuth(false);
-
-    async function getTask() {
-      try {
-        const response = await fetch(`/api/tasks/${id}`);
-
-        if (!response.ok) {
-          setError(
-            "Impossible de récupérer cette tâche."
-          );
+    const unsubscribe = onAuthStateChanged(
+      auth,
+      (user) => {
+        if (!user) {
+          router.replace("/login");
           return;
         }
 
-        const task: Task = await response.json();
+        setCheckingAuth(false);
 
-        setTitle(task.title);
-        setDescription(task.description);
-      } catch (error) {
-        console.error("Erreur :", error);
-        setError("Une erreur est survenue.");
-      } finally {
-        setLoading(false);
+        async function getTask() {
+          try {
+            const token = await user.getIdToken();
+
+            const response = await fetch(
+              `/api/tasks/${id}`,
+              {
+                headers: {
+                  Authorization: `Bearer ${token}`,
+                },
+              }
+            );
+
+            if (!response.ok) {
+              setError(
+                "Impossible de récupérer cette tâche."
+              );
+              return;
+            }
+
+            const task: Task = await response.json();
+
+            setTitle(task.title);
+            setDescription(task.description);
+          } catch (error) {
+            console.error("Erreur :", error);
+            setError("Une erreur est survenue.");
+          } finally {
+            setLoading(false);
+          }
+        }
+
+        getTask();
       }
-    }
+    );
 
-    getTask();
+    return () => unsubscribe();
   }, [id, router]);
 
   async function handleSubmit(
@@ -64,13 +85,25 @@ export default function EditTask() {
   ) {
     event.preventDefault();
 
+    setError("");
+
+    const user = auth.currentUser;
+
+    if (!user) {
+      setError("Tu dois être connecté.");
+      return;
+    }
+
     try {
+      const token = await user.getIdToken();
+
       const response = await fetch(
         `/api/tasks/${id}`,
         {
           method: "PUT",
           headers: {
             "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
           },
           body: JSON.stringify({
             title,

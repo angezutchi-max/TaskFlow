@@ -3,7 +3,12 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { getAuth, signInWithEmailAndPassword } from "firebase/auth";
+
 import Button from "@/components/Button";
+import app from "@/lib/firebase";
+
+const auth = getAuth(app);
 
 export default function Login() {
   const router = useRouter();
@@ -11,7 +16,6 @@ export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
-  const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
 
   async function handleSubmit(
@@ -20,7 +24,6 @@ export default function Login() {
     event.preventDefault();
 
     setError("");
-    setMessage("");
 
     if (!email) {
       setError("L'email est obligatoire.");
@@ -32,50 +35,36 @@ export default function Login() {
       return;
     }
 
-    if (password.length < 8) {
-      setError(
-        "Le mot de passe doit contenir au moins 8 caractères."
-      );
-      return;
-    }
-
     setLoading(true);
 
     try {
-      const response = await fetch("/api/login", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          email,
-          password,
-        }),
-      });
+      await signInWithEmailAndPassword(auth, email, password);
 
-      const data = await response.json();
-
-      console.log("Réponse API :", data);
-
-      if (!response.ok) {
-        setError(data.message);
-        return;
-      }
-
-      setMessage(data.message);
-
-      // Mémoriser la connexion
-      localStorage.setItem("isLoggedIn", "true");
-
+      // Connexion réussie
       window.dispatchEvent(new Event("authChange"));
 
-      // Rediriger vers le dashboard
       router.push("/dashboard");
-    } catch (error) {
-      console.error("ERREUR FETCH :", error);
-      setError(
-        "Une erreur est survenue. Veuillez réessayer."
-      );
+    } catch (error: any) {
+      console.error("Erreur Firebase :", error);
+
+      if (
+        error.code === "auth/invalid-credential" ||
+        error.code === "auth/wrong-password" ||
+        error.code === "auth/user-not-found"
+      ) {
+        setError("Email ou mot de passe incorrect.");
+      } else if (error.code === "auth/invalid-email") {
+        setError("L'adresse email n'est pas valide.");
+      } else if (error.code === "auth/too-many-requests") {
+        setError(
+          "Trop de tentatives. Veuillez patienter avant de réessayer."
+        );
+      } else {
+        setError(
+          error.message ||
+            "Une erreur est survenue lors de la connexion."
+        );
+      }
     } finally {
       setLoading(false);
     }
@@ -89,8 +78,6 @@ export default function Login() {
 
       {error && <p>{error}</p>}
 
-      {message && <p>{message}</p>}
-
       <form onSubmit={handleSubmit}>
         <div>
           <label htmlFor="email">Email</label>
@@ -100,9 +87,8 @@ export default function Login() {
             id="email"
             placeholder="Votre email"
             value={email}
-            onChange={(event) =>
-              setEmail(event.target.value)
-            }
+            onChange={(event) => setEmail(event.target.value)}
+            required
           />
         </div>
 
@@ -114,9 +100,8 @@ export default function Login() {
             id="password"
             placeholder="Votre mot de passe"
             value={password}
-            onChange={(event) =>
-              setPassword(event.target.value)
-            }
+            onChange={(event) => setPassword(event.target.value)}
+            required
           />
         </div>
 
