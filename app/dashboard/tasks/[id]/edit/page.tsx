@@ -14,6 +14,8 @@ type Task = {
   title: string;
   description: string;
   completed: boolean;
+  startDate: string;
+  endDate: string;
 };
 
 const auth = getAuth(app);
@@ -26,8 +28,12 @@ export default function EditTask() {
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+
   const [loading, setLoading] = useState(true);
   const [checkingAuth, setCheckingAuth] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -54,17 +60,22 @@ export default function EditTask() {
               }
             );
 
+            const data = await response.json();
+
             if (!response.ok) {
               setError(
-                "Impossible de récupérer cette tâche."
+                data.message ||
+                  "Impossible de récupérer cette tâche."
               );
               return;
             }
 
-            const task: Task = await response.json();
+            const task: Task = data;
 
             setTitle(task.title);
-            setDescription(task.description);
+            setDescription(task.description || "");
+            setStartDate(task.startDate || "");
+            setEndDate(task.endDate || "");
           } catch (error) {
             console.error("Erreur :", error);
             setError("Une erreur est survenue.");
@@ -87,6 +98,30 @@ export default function EditTask() {
 
     setError("");
 
+    const trimmedTitle = title.trim();
+
+    if (!trimmedTitle) {
+      setError("Le titre est obligatoire.");
+      return;
+    }
+
+    if (!startDate) {
+      setError("La date de début est obligatoire.");
+      return;
+    }
+
+    if (!endDate) {
+      setError("La date de fin est obligatoire.");
+      return;
+    }
+
+    if (endDate < startDate) {
+      setError(
+        "La date de fin doit être après ou égale à la date de début."
+      );
+      return;
+    }
+
     const user = auth.currentUser;
 
     if (!user) {
@@ -95,6 +130,8 @@ export default function EditTask() {
     }
 
     try {
+      setSaving(true);
+
       const token = await user.getIdToken();
 
       const response = await fetch(
@@ -106,15 +143,20 @@ export default function EditTask() {
             Authorization: `Bearer ${token}`,
           },
           body: JSON.stringify({
-            title,
-            description,
+            title: trimmedTitle,
+            description: description.trim(),
+            startDate,
+            endDate,
           }),
         }
       );
 
+      const data = await response.json();
+
       if (!response.ok) {
         setError(
-          "Impossible de modifier la tâche."
+          data.message ||
+            "Impossible de modifier la tâche."
         );
         return;
       }
@@ -123,72 +165,174 @@ export default function EditTask() {
     } catch (error) {
       console.error("Erreur :", error);
       setError("Une erreur est survenue.");
+    } finally {
+      setSaving(false);
     }
   }
 
   if (checkingAuth) {
     return (
-      <main>
-        <h1>Modifier la tâche</h1>
-        <p>Vérification de la connexion...</p>
+      <main className="task-form-page">
+        <div className="task-form-container">
+          <p className="loading-message">
+            Vérification de la connexion...
+          </p>
+        </div>
       </main>
     );
   }
 
   if (loading) {
     return (
-      <main>
-        <h1>Modifier la tâche</h1>
-        <p>Chargement de la tâche...</p>
+      <main className="task-form-page">
+        <div className="task-form-container">
+          <p className="loading-message">
+            Chargement de la tâche...
+          </p>
+        </div>
       </main>
     );
   }
 
-  if (error) {
+  if (error && !title) {
     return (
-      <main>
-        <h1>Modifier la tâche</h1>
-        <p>{error}</p>
+      <main className="task-form-page">
+        <div className="task-form-container">
+          <button
+            type="button"
+            className="back-button"
+            onClick={() => router.push("/dashboard")}
+          >
+            ← Retour au dashboard
+          </button>
+
+          <div className="form-error">
+            {error}
+          </div>
+        </div>
       </main>
     );
   }
 
   return (
-    <main>
-      <h1>Modifier la tâche</h1>
+    <main className="task-form-page">
+      <div className="task-form-container">
+        <div className="task-form-header">
+          <button
+            type="button"
+            className="back-button"
+            onClick={() => router.push("/dashboard")}
+            disabled={saving}
+          >
+            ← Retour
+          </button>
 
-      <form onSubmit={handleSubmit}>
-        <div>
-          <label htmlFor="title">Titre</label>
+          <h1>Modifier la tâche</h1>
 
-          <input
-            type="text"
-            id="title"
-            value={title}
-            onChange={(event) =>
-              setTitle(event.target.value)
-            }
-          />
+          <p>
+            Modifie les informations de ta tâche.
+          </p>
         </div>
 
-        <div>
-          <label htmlFor="description">
-            Description
-          </label>
+        {error && (
+          <div className="form-error">
+            {error}
+          </div>
+        )}
 
-          <textarea
-            id="description"
-            value={description}
-            onChange={(event) =>
-              setDescription(event.target.value)
-            }
-          />
-        </div>
+        <form
+          onSubmit={handleSubmit}
+          className="task-form"
+        >
+          <div className="form-group">
+            <label htmlFor="title">
+              Titre
+            </label>
 
-        <button type="submit">
-          Enregistrer les modifications
-        </button>
-      </form>
+            <input
+              type="text"
+              id="title"
+              value={title}
+              onChange={(event) =>
+                setTitle(event.target.value)
+              }
+              disabled={saving}
+            />
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="description">
+              Description
+            </label>
+
+            <textarea
+              id="description"
+              value={description}
+              onChange={(event) =>
+                setDescription(event.target.value)
+              }
+              rows={5}
+              disabled={saving}
+            />
+          </div>
+
+          <div className="date-fields">
+            <div className="form-group">
+              <label htmlFor="startDate">
+                Date de début
+              </label>
+
+              <input
+                type="date"
+                id="startDate"
+                value={startDate}
+                onChange={(event) =>
+                  setStartDate(event.target.value)
+                }
+                disabled={saving}
+              />
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="endDate">
+                Date de fin
+              </label>
+
+              <input
+                type="date"
+                id="endDate"
+                value={endDate}
+                min={startDate || undefined}
+                onChange={(event) =>
+                  setEndDate(event.target.value)
+                }
+                disabled={saving}
+              />
+            </div>
+          </div>
+
+          <div className="form-actions">
+            <button
+              type="button"
+              className="cancel-button"
+              onClick={() => router.push("/dashboard")}
+              disabled={saving}
+            >
+              Annuler
+            </button>
+
+            <button
+              type="submit"
+              className="submit-button"
+              disabled={saving}
+            >
+              {saving
+                ? "Enregistrement..."
+                : "Enregistrer les modifications"}
+            </button>
+          </div>
+        </form>
+      </div>
     </main>
   );
 }

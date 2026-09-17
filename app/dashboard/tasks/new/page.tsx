@@ -16,8 +16,12 @@ export default function NewTask() {
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+
   const [error, setError] = useState("");
   const [checkingAuth, setCheckingAuth] = useState(true);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
@@ -39,12 +43,33 @@ export default function NewTask() {
 
     setError("");
 
-    if (!title) {
+    const trimmedTitle = title.trim();
+
+    if (!trimmedTitle) {
       setError("Le titre est obligatoire.");
       return;
     }
 
+    if (!startDate) {
+      setError("La date de début est obligatoire.");
+      return;
+    }
+
+    if (!endDate) {
+      setError("La date de fin est obligatoire.");
+      return;
+    }
+
+    if (endDate < startDate) {
+      setError(
+        "La date de fin doit être après ou égale à la date de début."
+      );
+      return;
+    }
+
     try {
+      setSaving(true);
+
       const user = auth.currentUser;
 
       if (!user) {
@@ -61,71 +86,163 @@ export default function NewTask() {
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
-          title,
-          description,
+          title: trimmedTitle,
+          description: description.trim(),
+          startDate,
+          endDate,
         }),
       });
 
+      const data = await response.json();
+
       if (!response.ok) {
-        setError("Impossible de créer la tâche.");
+        setError(
+          data.message || "Impossible de créer la tâche."
+        );
         return;
       }
 
       router.push("/dashboard");
     } catch (error) {
-      console.error(error);
+      console.error("Erreur :", error);
       setError("Une erreur est survenue.");
+    } finally {
+      setSaving(false);
     }
   }
 
   if (checkingAuth) {
     return (
-      <main>
-        <p>Vérification de la connexion...</p>
+      <main className="task-form-page">
+        <div className="task-form-container">
+          <p className="loading-message">
+            Vérification de la connexion...
+          </p>
+        </div>
       </main>
     );
   }
 
   return (
-    <main>
-      <h1>Créer une tâche</h1>
+    <main className="task-form-page">
+      <div className="task-form-container">
+        <div className="task-form-header">
+          <button
+            type="button"
+            className="back-button"
+            onClick={() => router.push("/dashboard")}
+          >
+            ← Retour
+          </button>
 
-      {error && <p>{error}</p>}
+          <h1>Créer une tâche</h1>
 
-      <form onSubmit={handleSubmit}>
-        <div>
-          <label htmlFor="title">Titre</label>
-
-          <input
-            type="text"
-            id="title"
-            placeholder="Ex : Apprendre TypeScript"
-            value={title}
-            onChange={(event) =>
-              setTitle(event.target.value)
-            }
-          />
+          <p>
+            Ajoute une nouvelle tâche et définis sa période.
+          </p>
         </div>
 
-        <div>
-          <label htmlFor="description">
-            Description
-          </label>
+        {error && (
+          <div className="form-error">
+            {error}
+          </div>
+        )}
 
-          <textarea
-            id="description"
-            placeholder="Décris ta tâche..."
-            value={description}
-            onChange={(event) =>
-              setDescription(event.target.value)
-            }
-          />
-        </div>
+        <form
+          onSubmit={handleSubmit}
+          className="task-form"
+        >
+          <div className="form-group">
+            <label htmlFor="title">
+              Titre
+            </label>
 
-        <button type="submit">
-          Créer la tâche
-        </button>
-      </form>
+            <input
+              type="text"
+              id="title"
+              placeholder="Ex : Apprendre TypeScript"
+              value={title}
+              onChange={(event) =>
+                setTitle(event.target.value)
+              }
+              disabled={saving}
+            />
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="description">
+              Description
+            </label>
+
+            <textarea
+              id="description"
+              placeholder="Décris ce que tu dois accomplir..."
+              value={description}
+              onChange={(event) =>
+                setDescription(event.target.value)
+              }
+              rows={5}
+              disabled={saving}
+            />
+          </div>
+
+          <div className="date-fields">
+            <div className="form-group">
+              <label htmlFor="startDate">
+                Date de début
+              </label>
+
+              <input
+                type="date"
+                id="startDate"
+                value={startDate}
+                onChange={(event) =>
+                  setStartDate(event.target.value)
+                }
+                disabled={saving}
+              />
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="endDate">
+                Date de fin
+              </label>
+
+              <input
+                type="date"
+                id="endDate"
+                value={endDate}
+                min={startDate || undefined}
+                onChange={(event) =>
+                  setEndDate(event.target.value)
+                }
+                disabled={saving}
+              />
+            </div>
+          </div>
+
+          <div className="form-actions">
+            <button
+              type="button"
+              className="cancel-button"
+              onClick={() => router.push("/dashboard")}
+              disabled={saving}
+            >
+              Annuler
+            </button>
+
+            <button
+              type="submit"
+              className="submit-button"
+              disabled={saving}
+            >
+              {saving
+                ? "Création..."
+                : "Créer la tâche"}
+            </button>
+          </div>
+        </form>
+      </div>
     </main>
   );
 }

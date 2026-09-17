@@ -16,9 +16,21 @@ type Task = {
   title: string;
   description: string;
   completed: boolean;
+  startDate: string;
+  endDate: string;
 };
 
 const auth = getAuth(app);
+
+function formatDate(date: string) {
+  if (!date) {
+    return "Non définie";
+  }
+
+  const [year, month, day] = date.split("-");
+
+  return `${day}/${month}/${year}`;
+}
 
 export default function Dashboard() {
   const router = useRouter();
@@ -38,7 +50,7 @@ export default function Dashboard() {
 
         setUserEmail(user.email || "");
 
-        async function getTasks() {
+        async function loadTasks() {
           try {
             const token = await user.getIdToken();
 
@@ -58,13 +70,16 @@ export default function Dashboard() {
 
             setTasks(data);
           } catch (error) {
-            console.error("Erreur :", error);
+            console.error(
+              "Erreur lors du chargement des tâches :",
+              error
+            );
           } finally {
             setLoading(false);
           }
         }
 
-        getTasks();
+        loadTasks();
       }
     );
 
@@ -150,13 +165,13 @@ export default function Dashboard() {
       }
 
       setTasks((currentTasks) =>
-        currentTasks.map((t) =>
-          t.id === task.id
+        currentTasks.map((currentTask) =>
+          currentTask.id === task.id
             ? {
-                ...t,
-                completed: !t.completed,
+                ...currentTask,
+                completed: !currentTask.completed,
               }
-            : t
+            : currentTask
         )
       );
     } catch (error) {
@@ -187,6 +202,10 @@ export default function Dashboard() {
 
   return (
     <main className="dashboard">
+      {/* =========================
+          EN-TÊTE
+      ========================= */}
+
       <section className="dashboard-header">
         <div>
           <p className="dashboard-label">
@@ -226,6 +245,10 @@ export default function Dashboard() {
         </div>
       </section>
 
+      {/* =========================
+          STATISTIQUES
+      ========================= */}
+
       <section className="stats-grid">
         <div className="stat-card">
           <div className="stat-icon blue">✓</div>
@@ -255,11 +278,19 @@ export default function Dashboard() {
         </div>
       </section>
 
+      {/* =========================
+          LISTE DES TÂCHES
+      ========================= */}
+
       <section className="tasks-section">
         <div className="section-header">
           <div>
             <h2>Mes tâches</h2>
-            <p>Gère tes tâches quotidiennes.</p>
+
+            <p>
+              Sélectionne une tâche pour consulter ses
+              détails.
+            </p>
           </div>
 
           <span className="task-count">
@@ -286,15 +317,39 @@ export default function Dashboard() {
             </Link>
           </div>
         ) : (
-          <div className="tasks-grid">
+          <div className="tasks-list">
+            {/* En-tête de la liste */}
+
+            <div className="tasks-list-header">
+              <span>Tâche</span>
+              <span>État</span>
+              <span>Date de fin</span>
+              <span>Actions</span>
+            </div>
+
+            {/* Tâches */}
+
             {tasks.map((task) => (
               <div
-                className={`task-card ${
+                key={task.id}
+                className={`task-row ${
                   task.completed ? "completed" : ""
                 }`}
-                key={task.id}
+                onClick={() =>
+                  router.push(
+                    `/dashboard/tasks/${task.id}`
+                  )
+                }
               >
-                <div className="task-card-top">
+                {/* Titre uniquement */}
+
+                <div className="task-row-title">
+                  {task.title}
+                </div>
+
+                {/* État */}
+
+                <div className="task-row-status">
                   <span
                     className={`status ${
                       task.completed
@@ -308,33 +363,49 @@ export default function Dashboard() {
                   </span>
                 </div>
 
-                <h3>{task.title}</h3>
+                {/* Date de fin */}
 
-                <p className="task-description">
-                  {task.description ||
-                    "Aucune description."}
-                </p>
+                <div className="task-row-date">
+                  {formatDate(task.endDate)}
+                </div>
 
-                <div className="task-actions">
+                {/* Actions */}
+
+                <div
+                  className="task-row-actions"
+                  onClick={(event) =>
+                    event.stopPropagation()
+                  }
+                >
                   <button
+                    type="button"
                     className="action-button complete"
                     onClick={() => toggleTask(task)}
+                    title={
+                      task.completed
+                        ? "Remettre en cours"
+                        : "Terminer"
+                    }
                   >
-                    {task.completed
-                      ? "↩ En cours"
-                      : "✓ Terminer"}
+                    {task.completed ? "↩" : "✓"}
                   </button>
 
                   <Link
                     href={`/dashboard/tasks/${task.id}/edit`}
                     className="action-button edit"
+                    onClick={(event) =>
+                      event.stopPropagation()
+                    }
                   >
                     Modifier
                   </Link>
 
                   <button
+                    type="button"
                     className="action-button delete"
-                    onClick={() => deleteTask(task.id)}
+                    onClick={() =>
+                      deleteTask(task.id)
+                    }
                   >
                     Supprimer
                   </button>
